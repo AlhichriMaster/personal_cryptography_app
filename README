@@ -1,0 +1,237 @@
+# Encryption and Hashing Module - Comprehensive Test Suite
+
+## Overview
+
+This project provides a comprehensive test suite for encryption and hashing modules with support for:
+- **String encryption/decryption** (AES-256-CBC-CTS and Blowfish-CBC)
+- **File encryption/decryption** (both algorithms)
+- **Hash functions** (SHA256 and MD5 for strings, data, and files)
+
+## Features
+
+### Encryption Module
+- **AES-256-CBC-CTS Encryption**: Strong encryption with ciphertext stealing mode
+- **Blowfish-CBC Encryption**: Alternative cipher for compatibility
+- **Auto-detection**: Decrypt function automatically detects which algorithm was used
+- **Password-based encryption**: Uses PBKDF2 key derivation with SHA256
+- **Salt and IV**: Automatically generated for each encryption
+
+### Hasher Module
+- **SHA256 hashing**: String, binary data, file, and raw output
+- **MD5 hashing**: String, binary data, file, and raw output
+- **Consistent output**: Hex string format for easy verification
+
+## Test Suite Coverage
+
+### 1. String Encryption Tests
+- ✅ AES-256-CBC-CTS encryption/decryption
+- ✅ Blowfish-CBC encryption/decryption
+- ✅ Default encryption (uses AES)
+- ✅ Wrong password handling
+- ✅ Auto-detection of algorithm
+
+### 2. File Encryption Tests (NEW!)
+- ✅ AES file encryption/decryption
+- ✅ Blowfish file encryption/decryption
+- ✅ File integrity verification
+- ✅ Read/write encrypted files
+- ✅ Large binary data handling
+
+### 3. Hasher Module Tests (NEW!)
+- ✅ SHA256 string hashing
+- ✅ MD5 string hashing
+- ✅ SHA256 binary data hashing
+- ✅ MD5 binary data hashing
+- ✅ SHA256 raw output (binary)
+- ✅ MD5 raw output (binary)
+- ✅ File hashing (SHA256 and MD5)
+- ✅ Empty string hashing
+- ✅ Large data hashing (10KB+)
+- ✅ Hash consistency verification
+- ✅ File hash vs data hash comparison
+
+## Test Results
+
+All tests passed successfully! ✓✓✓
+
+```
+╔════════════════════════════════════════════════════════════╗
+║                      TEST SUMMARY                          ║
+╚════════════════════════════════════════════════════════════╝
+
+✓✓✓ ALL TESTS PASSED! ✓✓✓
+```
+
+## How to Use
+
+### Building the Project
+
+```bash
+make clean
+make
+```
+
+### Running Tests
+
+```bash
+make run
+# or
+./test_program
+```
+
+### Using Encryption Functions
+
+#### Encrypting a String
+```cpp
+const char* password = "MySecurePassword";
+unsigned char plaintext[] = "Secret message";
+unsigned char encrypted[1024];
+size_t encrypted_len;
+
+// Encrypt with AES (default)
+encrypt_with_password(password, plaintext, sizeof(plaintext)-1, 
+                     encrypted, &encrypted_len);
+
+// Or explicitly use Blowfish
+encrypt_with_password_BF(password, plaintext, sizeof(plaintext)-1,
+                        encrypted, &encrypted_len);
+```
+
+#### Encrypting a File
+```cpp
+// Read file into buffer
+std::vector<unsigned char> file_data = read_file("document.pdf");
+
+// Encrypt the file data
+unsigned char encrypted[file_data.size() + 1024];
+size_t encrypted_len;
+encrypt_with_password_AES(password, file_data.data(), file_data.size(),
+                         encrypted, &encrypted_len);
+
+// Write encrypted data to file
+write_file("document.pdf.enc", encrypted, encrypted_len);
+```
+
+#### Decrypting (Auto-detects Algorithm)
+```cpp
+unsigned char decrypted[1024];
+size_t decrypted_len;
+
+// Works with both AES and Blowfish encrypted data
+decrypt_with_password(password, encrypted, encrypted_len,
+                     decrypted, &decrypted_len);
+```
+
+### Using Hash Functions
+
+#### Hashing Strings
+```cpp
+std::string text = "Hello, World!";
+
+// SHA256
+std::string sha256_hash = sha256_string(text);
+// Output: dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
+
+// MD5
+std::string md5_hash = md5_string(text);
+// Output: 65a8e27d8879283831b664bd8b7f0ad4
+```
+
+#### Hashing Files
+```cpp
+try {
+    std::string file_sha256 = sha256_file("document.pdf");
+    std::string file_md5 = md5_file("document.pdf");
+    std::cout << "SHA256: " << file_sha256 << std::endl;
+    std::cout << "MD5: " << file_md5 << std::endl;
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+}
+```
+
+#### Hashing Binary Data
+```cpp
+unsigned char data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
+
+// Get hex string output
+std::string hash = sha256_data(data, sizeof(data));
+
+// Get raw binary output
+std::vector<unsigned char> raw_hash = sha256_raw(data, sizeof(data));
+```
+
+## File Structure
+
+```
+.
+├── main.cpp              # Main program entry point
+├── test_suite.cpp        # Comprehensive test suite (ENHANCED)
+├── Encryption.cpp        # Encryption implementation
+├── Hasher.cpp           # Hashing implementation
+├── makefile             # Build configuration
+└── include/
+    ├── Encryption.h     # Encryption header
+    ├── Hasher.h        # Hashing header
+    └── test_suite.h    # Test suite header
+```
+
+## Algorithm Details
+
+### AES-256-CBC-CTS
+- **Key size**: 256 bits (32 bytes)
+- **IV size**: 128 bits (16 bytes)
+- **Block size**: 128 bits (16 bytes)
+- **Mode**: CBC with Ciphertext Stealing (no padding)
+- **Output format**: `[0x01][salt(16)][iv(16)][ciphertext]`
+
+### Blowfish-CBC
+- **Key size**: 128 bits (16 bytes, can be 4-56 bytes)
+- **IV size**: 64 bits (8 bytes)
+- **Block size**: 64 bits (8 bytes)
+- **Padding**: PKCS7
+- **Output format**: `[0x02][salt(16)][iv(8)][ciphertext]`
+
+### Key Derivation
+- **Algorithm**: PBKDF2-HMAC-SHA256
+- **Iterations**: 100,000
+- **Salt size**: 16 bytes (randomly generated)
+
+### Hash Functions
+- **SHA256**: 256-bit (32 bytes) output, 64 hex characters
+- **MD5**: 128-bit (16 bytes) output, 32 hex characters
+
+## Dependencies
+
+- OpenSSL 3.0+ (`libssl-dev`)
+- C++11 or later
+- Standard C++ library
+
+## Security Notes
+
+1. **Password Security**: Use strong, unique passwords
+2. **No Authentication**: Current implementation doesn't include HMAC/authentication tags
+3. **MD5 Warning**: MD5 is cryptographically broken; use SHA256 for security-critical applications
+4. **Random Generation**: Uses OpenSSL's `RAND_bytes` for cryptographically secure randomness
+5. **Wrong Password**: Decryption with wrong password may succeed but produce garbage (no authentication)
+
+## Improvements Made
+
+1. ✅ Added comprehensive file encryption/decryption tests
+2. ✅ Added extensive hasher module tests
+3. ✅ Test file creation and cleanup
+4. ✅ Hash consistency verification
+5. ✅ File hash vs data hash comparison
+6. ✅ Large data handling tests
+7. ✅ Empty string edge case tests
+8. ✅ Better error handling and reporting
+9. ✅ Organized test output with clear sections
+10. ✅ Helper functions for file I/O
+
+## License
+
+Educational/Research purposes.
+
+## Author
+
+Enhanced test suite by Claude (Anthropic)
+Original encryption module by Youssuf Hichri
