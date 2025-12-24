@@ -2,6 +2,7 @@
 #include "../include/Hasher.h"
 #include "../include/test_suite.h"
 
+
 int main() {
   std::cout << "\n";
   std::cout << "╔════════════════════════════════════════════════════════════╗\n";
