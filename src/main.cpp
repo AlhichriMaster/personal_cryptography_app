@@ -1,52 +1,35 @@
+#include "../include/CLI.h"
 #include <iostream>
-#include "../include/Hasher.h"
-#include "../include/test_suite.h"
-#include "../include/RSA.h"
-#include <cassert>
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
 
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "Cryptography Application v1.0\n";
+        std::cout << "Usage: crypto [COMMAND] [OPTIONS]\n";
+        std::cout << "Try 'crypto help' for more information.\n";
+        return 1;
+    }
 
-int main() {
-  std::cout << "\n";
-  std::cout << "╔════════════════════════════════════════════════════════════╗\n";
-  std::cout << "║      CRYPTOGRAPHY & HASHING MODULE DEMONSTRATION           ║\n";
-  std::cout << "╚════════════════════════════════════════════════════════════╝\n";
-  std::cout << "\n";
+    CommandLineParser parser(argc, argv);
+    std::string command = parser.getCommand();
 
-  // Quick demo of hashing
-  std::cout << "=== QUICK HASHING DEMO ===\n\n";
-
-  std::string name = "Youssuf Hichri";
-  std::string md5_hash = md5_string(name);
-  std::string sha256_hash = sha256_string(name);
-
-  std::cout << "Name: " << name << "\n";
-  std::cout << "MD5:    " << md5_hash << "\n";
-  std::cout << "SHA256: " << sha256_hash << "\n";
-
-
-
-  RSAKeyPair keys = generate_rsa_keypair(2048);
-  assert(!keys.public_key_pem.empty());
-  assert(!keys.private_key_pem.empty());
-
-  const char* message = "Hello, RSA!";
-  std::string encrypted = rsa_encrypt_public(keys.public_key_pem, (unsigned char*)message,
-                                             strlen(message));
-
-  std::vector<unsigned char> decrypted = rsa_decrypt_private(keys.private_key_pem, encrypted);
-
-  assert(memcmp(message, decrypted.data(), strlen(message)) == 0);
-
-  save_public_key("test_pub.pem", keys.public_key_pem);
-  save_private_key("test_priv.pem", keys.private_key_pem);
-  std::string loaded_pub = load_public_key("test_pub.pem");
-  assert(loaded_pub == keys.public_key_pem);
-
-  // Run comprehensive test suite
-  std::cout << "\n\nStarting comprehensive test suite...\n";
-
-  return run_encryption_tests();
+    if (command == "hash") {
+        return handle_hash_command(parser);
+    } else if (command == "encrypt") {
+        return handle_encrypt_command(parser);
+    } else if (command == "decrypt") {
+        return handle_decrypt_command(parser);
+    } else if (command == "keygen") {
+        return handle_keygen_command(parser);
+    } else if (command == "sign") {
+        return handle_sign_command(parser);
+    } else if (command == "verify") {
+        return handle_verify_command(parser);
+    } else if (command == "help") {
+        parser.printUsage();
+        return 0;
+    } else {
+        std::cerr << "Unknown command: " << command << "\n";
+        std::cerr << "Try 'crypto help' for usage information.\n";
+        return 1;
+    }
 }

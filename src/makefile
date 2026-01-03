@@ -7,7 +7,7 @@ LDFLAGS = -lssl -lcrypto
 # Target Executable
 TARGET = main
 # Source files
-SRCS = main.cpp Encryption.cpp Hasher.cpp RSA.cpp test_suite.cpp
+SRCS = main.cpp Encryption.cpp Hasher.cpp RSA.cpp Signature.cpp test_suite.cpp
 # Object files
 OBJS = $(SRCS:.cpp=.o)
 

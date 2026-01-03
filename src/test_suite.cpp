@@ -2,8 +2,11 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
+#include <cassert>
 #include "../include/Encryption.h"
 #include "../include/Hasher.h"
+#include "../include/RSA.h"
+#include "../include/Signature.h"
 
 void print_hex(const unsigned char* data, size_t len, const char* label) {
   printf("%s: ", label);
@@ -471,6 +474,201 @@ int test_hasher() {
   return failures;
 }
 
+// Test RSA encryption/decryption
+int test_rsa_encryption() {
+  printf("\n\n=== RSA ENCRYPTION TESTS ===\n\n");
+
+  int failures = 0;
+
+  // Test 1: Key generation
+  printf("--- Test 1: RSA Key Generation ---\n");
+  RSAKeyPair keys = generate_rsa_keypair(2048);
+
+  if (!keys.public_key_pem.empty() && !keys.private_key_pem.empty()) {
+    printf("✓ Key pair generated successfully\n");
+  } else {
+    printf("✗ Key pair generation failed!\n");
+    failures++;
+    return failures;
+  }
+
+  // Test 2: Encryption/Decryption
+  printf("\n--- Test 2: RSA Encryption/Decryption ---\n");
+  const char* rsa_message = "Hello, RSA!";
+  printf("Original message: \"%s\"\n", rsa_message);
+
+  try {
+    std::string encrypted = rsa_encrypt_public(keys.public_key_pem,
+                                               (unsigned char*)rsa_message,
+                                               strlen(rsa_message));
+    printf("✓ Message encrypted successfully\n");
+
+    std::vector<unsigned char> decrypted = rsa_decrypt_private(keys.private_key_pem,
+                                                                encrypted);
+    std::string decrypted_message(decrypted.begin(), decrypted.end());
+    printf("Decrypted message: \"%s\"\n", decrypted_message);
+
+    if (memcmp(rsa_message, decrypted.data(), strlen(rsa_message)) == 0) {
+      printf("✓ Decryption matches original!\n");
+    } else {
+      printf("✗ ERROR: Decrypted doesn't match!\n");
+      failures++;
+    }
+  } catch (const std::exception& e) {
+    printf("✗ Exception during encryption/decryption: %s\n", e.what());
+    failures++;
+  }
+
+  // Test 3: Key save/load
+  printf("\n--- Test 3: Key File Operations ---\n");
+  try {
+    save_public_key("test_pub.pem", keys.public_key_pem);
+    save_private_key("test_priv.pem", keys.private_key_pem);
+
+    std::string loaded_pub = load_public_key("test_pub.pem");
+    std::string loaded_priv = load_private_key("test_priv.pem");
+
+    if (loaded_pub == keys.public_key_pem && loaded_priv == keys.private_key_pem) {
+      printf("✓ Keys saved and loaded successfully\n");
+    } else {
+      printf("✗ ERROR: Loaded keys don't match!\n");
+      failures++;
+    }
+
+    // Cleanup
+    remove("test_pub.pem");
+    remove("test_priv.pem");
+  } catch (const std::exception& e) {
+    printf("✗ Exception during key file operations: %s\n", e.what());
+    failures++;
+  }
+
+  return failures;
+}
+
+// Test digital signatures
+int test_digital_signatures() {
+  printf("\n\n=== DIGITAL SIGNATURE TESTS ===\n\n");
+
+  int failures = 0;
+
+  // Generate key pair for signatures
+  printf("--- Generating RSA Key Pair for Signing ---\n");
+  RSAKeyPair sig_keys = generate_rsa_keypair(2048);
+
+  if (sig_keys.public_key_pem.empty() || sig_keys.private_key_pem.empty()) {
+    printf("✗ Failed to generate signing key pair!\n");
+    return 1;
+  }
+  printf("✓ Signing key pair generated\n");
+
+  // Test 1: Data signing and verification
+  printf("\n--- Test 1: Data Signing and Verification ---\n");
+  const char* sig_message = "Important message";
+  printf("Message: \"%s\"\n", sig_message);
+
+  try {
+    std::string signature = sign_data(sig_keys.private_key_pem,
+                                      (unsigned char*)sig_message,
+                                      strlen(sig_message));
+    printf("✓ Message signed successfully\n");
+
+    bool valid = verify_signature(sig_keys.public_key_pem,
+                                  (unsigned char*)sig_message,
+                                  strlen(sig_message),
+                                  signature);
+    printf("Signature verification: %s\n", valid ? "VALID" : "INVALID");
+
+    if (valid) {
+      printf("✓ Signature verified successfully!\n");
+    } else {
+      printf("✗ ERROR: Signature verification failed!\n");
+      failures++;
+    }
+  } catch (const std::exception& e) {
+    printf("✗ Exception during signing/verification: %s\n", e.what());
+    failures++;
+  }
+
+  // Test 2: Tampered data detection
+  printf("\n--- Test 2: Tampered Data Detection ---\n");
+  const char* tampered = "Important mesage"; // typo
+  printf("Tampered message: \"%s\"\n", tampered);
+
+  try {
+    const char* original = "Important message";
+    std::string signature = sign_data(sig_keys.private_key_pem,
+                                      (unsigned char*)original,
+                                      strlen(original));
+
+    bool invalid = verify_signature(sig_keys.public_key_pem,
+                                    (unsigned char*)tampered,
+                                    strlen(tampered),
+                                    signature);
+    printf("Signature verification: %s\n", invalid ? "VALID" : "INVALID");
+
+    if (!invalid) {
+      printf("✓ Tampering detected successfully!\n");
+    } else {
+      printf("✗ ERROR: Tampering not detected!\n");
+      failures++;
+    }
+  } catch (const std::exception& e) {
+    printf("✗ Exception during tamper detection: %s\n", e.what());
+    failures++;
+  }
+
+  // Test 3: File signing and verification
+  printf("\n--- Test 3: File Signing and Verification ---\n");
+
+  // Create test document
+  const std::string doc_path = "test_document.txt";
+  std::ofstream doc(doc_path);
+  if (!doc) {
+    printf("✗ Failed to create test document!\n");
+    failures++;
+  } else {
+    doc << "This is a confidential document.\n";
+    doc << "Author: Test Suite\n";
+    doc << "Date: 2025-01-03\n";
+    doc << "Classification: SECRET\n";
+    doc.close();
+    printf("✓ Test document created\n");
+
+    try {
+      // Sign the file
+      bool created = create_signature_file(sig_keys.private_key_pem,
+                                           doc_path,
+                                           doc_path + ".sig");
+      if (!created) {
+        printf("✗ Failed to create signature file!\n");
+        failures++;
+      } else {
+        // Verify the file signature
+        bool file_valid = verify_signature_file(sig_keys.public_key_pem,
+                                               doc_path,
+                                               doc_path + ".sig");
+        if (file_valid) {
+          printf("✓ File signature verified successfully!\n");
+        } else {
+          printf("✗ ERROR: File signature verification failed!\n");
+          failures++;
+        }
+
+        // Cleanup
+        remove((doc_path + ".sig").c_str());
+      }
+    } catch (const std::exception& e) {
+      printf("✗ Exception during file signing: %s\n", e.what());
+      failures++;
+    }
+
+    remove(doc_path.c_str());
+  }
+
+  return failures;
+}
+
 int run_encryption_tests() {
   printf("\n");
   printf("╔════════════════════════════════════════════════════════════╗\n");
@@ -483,6 +681,8 @@ int run_encryption_tests() {
   total_failures += test_string_encryption();
   total_failures += test_file_encryption();
   total_failures += test_hasher();
+  total_failures += test_rsa_encryption();
+  total_failures += test_digital_signatures();
 
   // Summary
   printf("\n\n");
