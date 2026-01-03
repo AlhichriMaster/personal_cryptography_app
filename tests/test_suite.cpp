@@ -506,7 +506,7 @@ int test_rsa_encryption() {
     std::vector<unsigned char> decrypted = rsa_decrypt_private(keys.private_key_pem,
                                                                 encrypted);
     std::string decrypted_message(decrypted.begin(), decrypted.end());
-    printf("Decrypted message: \"%s\"\n", decrypted_message);
+    printf("Decrypted message: \"%s\"\n", decrypted_message.c_str());
 
     if (memcmp(rsa_message, decrypted.data(), strlen(rsa_message)) == 0) {
       printf("✓ Decryption matches original!\n");
@@ -697,4 +697,11 @@ int run_encryption_tests() {
     printf("\n✗✗✗ %d TEST(S) FAILED! ✗✗✗\n\n", total_failures);
     return 1;
   }
+}
+
+
+int main() {
+
+  run_encryption_tests();
+
 }
