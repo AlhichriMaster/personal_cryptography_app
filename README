@@ -1,237 +1,157 @@
-# Encryption and Hashing Module - Comprehensive Test Suite
+# Cryptography CLI Application
 
-## Overview
+A comprehensive command-line cryptography toolkit built in C++ with OpenSSL, providing symmetric encryption, asymmetric encryption, hashing, and digital signature capabilities.
 
-This project provides a comprehensive test suite for encryption and hashing modules with support for:
-- **String encryption/decryption** (AES-256-CBC-CTS and Blowfish-CBC)
-- **File encryption/decryption** (both algorithms)
-- **Hash functions** (SHA256 and MD5 for strings, data, and files)
+## Demo
+Check out my demo for the project on youtube: [Demo Link](https://youtu.be/AMcppOT4lYk)
+
 
 ## Features
 
-### Encryption Module
-- **AES-256-CBC-CTS Encryption**: Strong encryption with ciphertext stealing mode
-- **Blowfish-CBC Encryption**: Alternative cipher for compatibility
-- **Auto-detection**: Decrypt function automatically detects which algorithm was used
-- **Password-based encryption**: Uses PBKDF2 key derivation with SHA256
-- **Salt and IV**: Automatically generated for each encryption
+### 🔐 Symmetric Encryption
+- **AES-256-CBC-CTS**: Industry-standard encryption with PBKDF2 key derivation
+- **Blowfish-CBC**: Legacy cipher support with PKCS7 padding
+- Password-based encryption with automatic algorithm detection during decryption
+- Secure key derivation using PBKDF2-HMAC-SHA256 (100,000 iterations)
 
-### Hasher Module
-- **SHA256 hashing**: String, binary data, file, and raw output
-- **MD5 hashing**: String, binary data, file, and raw output
-- **Consistent output**: Hex string format for easy verification
+### 🔑 Asymmetric Cryptography (RSA)
+- RSA key pair generation (2048-bit and 4096-bit)
+- Public key encryption with OAEP padding
+- Private key decryption
+- PEM format key storage with restricted file permissions
+- Secure key management practices
 
-## Test Suite Coverage
+### 🛡️ Digital Signatures
+- RSA signature creation using SHA-256 hashing
+- Signature verification for data integrity and authenticity
+- Detached signature file format (.sig)
+- Support for signing and verifying files of any size
 
-### 1. String Encryption Tests
-- ✅ AES-256-CBC-CTS encryption/decryption
-- ✅ Blowfish-CBC encryption/decryption
-- ✅ Default encryption (uses AES)
-- ✅ Wrong password handling
-- ✅ Auto-detection of algorithm
+### 🔢 Cryptographic Hashing
+- SHA-256 hashing for strings and files
+- MD5 hashing for strings and files
+- Raw binary hash output support
+- Hexadecimal hash representation
 
-### 2. File Encryption Tests (NEW!)
-- ✅ AES file encryption/decryption
-- ✅ Blowfish file encryption/decryption
-- ✅ File integrity verification
-- ✅ Read/write encrypted files
-- ✅ Large binary data handling
+## Technical Implementation
 
-### 3. Hasher Module Tests (NEW!)
-- ✅ SHA256 string hashing
-- ✅ MD5 string hashing
-- ✅ SHA256 binary data hashing
-- ✅ MD5 binary data hashing
-- ✅ SHA256 raw output (binary)
-- ✅ MD5 raw output (binary)
-- ✅ File hashing (SHA256 and MD5)
-- ✅ Empty string hashing
-- ✅ Large data hashing (10KB+)
-- ✅ Hash consistency verification
-- ✅ File hash vs data hash comparison
+### Architecture
+- Modular design with separate components for encryption, hashing, RSA operations, and signatures
+- Command-line interface with option parsing and comprehensive help system
+- Error handling with detailed user feedback
+- Resource cleanup using RAII principles
 
-## Test Results
+### Security Features
+- Automatic detection of encryption algorithms from file headers
+- Base64 encoding for binary data transmission
+- Private key files with restricted permissions (0600 on Unix)
+- Secure random number generation using OpenSSL's RAND_bytes
+- Memory cleanup for sensitive key material
 
-All tests passed successfully! ✓✓✓
+### Dependencies
+- **OpenSSL 3.x**: Cryptographic operations
+- **C++17**: Modern C++ features
+- **GCC/G++**: Compilation
 
-```
-╔════════════════════════════════════════════════════════════╗
-║                      TEST SUMMARY                          ║
-╚════════════════════════════════════════════════════════════╝
-
-✓✓✓ ALL TESTS PASSED! ✓✓✓
-```
-
-## How to Use
-
-### Building the Project
+## Building
 
 ```bash
-make clean
+# Compile the application
 make
+
+# Clean build artifacts
+make clean
+
+# Run the application
+./crypto help
 ```
 
-### Running Tests
+## Usage Examples
 
+### Hashing
 ```bash
-make run
-# or
-./test_program
+# Hash a string with SHA-256
+crypto hash -a sha256 -s "Hello World"
+
+# Hash a file with MD5
+crypto hash -a md5 -f document.pdf
 ```
 
-### Using Encryption Functions
+### Symmetric Encryption
+```bash
+# Encrypt file with AES
+crypto encrypt -a aes -f secret.txt -p mypassword
 
-#### Encrypting a String
-```cpp
-const char* password = "MySecurePassword";
-unsigned char plaintext[] = "Secret message";
-unsigned char encrypted[1024];
-size_t encrypted_len;
+# Encrypt file with Blowfish
+crypto encrypt -a blowfish -f data.bin -p pass123 -o data.encrypted
 
-// Encrypt with AES (default)
-encrypt_with_password(password, plaintext, sizeof(plaintext)-1, 
-                     encrypted, &encrypted_len);
-
-// Or explicitly use Blowfish
-encrypt_with_password_BF(password, plaintext, sizeof(plaintext)-1,
-                        encrypted, &encrypted_len);
+# Decrypt (auto-detects algorithm)
+crypto decrypt -f secret.txt.enc -p mypassword
 ```
 
-#### Encrypting a File
-```cpp
-// Read file into buffer
-std::vector<unsigned char> file_data = read_file("document.pdf");
+### RSA Operations
+```bash
+# Generate 2048-bit key pair
+crypto keygen -b 2048 -o mykey
 
-// Encrypt the file data
-unsigned char encrypted[file_data.size() + 1024];
-size_t encrypted_len;
-encrypt_with_password_AES(password, file_data.data(), file_data.size(),
-                         encrypted, &encrypted_len);
+# Encrypt small file with RSA
+crypto encrypt -a rsa -f message.txt -k mykey_public.pem
 
-// Write encrypted data to file
-write_file("document.pdf.enc", encrypted, encrypted_len);
+# Decrypt with private key
+crypto decrypt -f message.txt.enc -k mykey_private.pem
 ```
 
-#### Decrypting (Auto-detects Algorithm)
-```cpp
-unsigned char decrypted[1024];
-size_t decrypted_len;
+### Digital Signatures
+```bash
+# Sign a file
+crypto sign -f document.pdf -k private.pem
 
-// Works with both AES and Blowfish encrypted data
-decrypt_with_password(password, encrypted, encrypted_len,
-                     decrypted, &decrypted_len);
+# Verify signature
+crypto verify -f document.pdf -k public.pem -s document.pdf.sig
 ```
 
-### Using Hash Functions
+## File Format Specifications
 
-#### Hashing Strings
-```cpp
-std::string text = "Hello, World!";
-
-// SHA256
-std::string sha256_hash = sha256_string(text);
-// Output: dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
-
-// MD5
-std::string md5_hash = md5_string(text);
-// Output: 65a8e27d8879283831b664bd8b7f0ad4
+### Encrypted Files
+**AES-256-CBC-CTS:**
+```
+[Algorithm ID: 1 byte] [Salt: 16 bytes] [IV: 16 bytes] [Ciphertext: variable]
 ```
 
-#### Hashing Files
-```cpp
-try {
-    std::string file_sha256 = sha256_file("document.pdf");
-    std::string file_md5 = md5_file("document.pdf");
-    std::cout << "SHA256: " << file_sha256 << std::endl;
-    std::cout << "MD5: " << file_md5 << std::endl;
-} catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-}
+**Blowfish-CBC:**
+```
+[Algorithm ID: 1 byte] [Salt: 16 bytes] [IV: 8 bytes] [Ciphertext: variable]
 ```
 
-#### Hashing Binary Data
-```cpp
-unsigned char data[] = {0x01, 0x02, 0x03, 0x04, 0x05};
-
-// Get hex string output
-std::string hash = sha256_data(data, sizeof(data));
-
-// Get raw binary output
-std::vector<unsigned char> raw_hash = sha256_raw(data, sizeof(data));
+### Signature Files (.sig)
+```
+SIGNATURE-V1
+<base64-encoded-signature>
 ```
 
-## File Structure
+## Security Considerations
+
+- **RSA Encryption Limits**: RSA can only encrypt data smaller than the key size minus padding overhead (~245 bytes for 2048-bit keys). For larger data, use hybrid encryption with AES.
+- **Key Storage**: Private keys are stored with restricted permissions (owner read/write only on Unix systems)
+- **Password Requirements**: Strong passwords are recommended for symmetric encryption
+- **Algorithm Selection**: AES-256 is recommended over Blowfish for new applications
+
+## Project Structure
 
 ```
 .
-├── main.cpp              # Main program entry point
-├── test_suite.cpp        # Comprehensive test suite (ENHANCED)
-├── Encryption.cpp        # Encryption implementation
-├── Hasher.cpp           # Hashing implementation
-├── makefile             # Build configuration
-└── include/
-    ├── Encryption.h     # Encryption header
-    ├── Hasher.h        # Hashing header
-    └── test_suite.h    # Test suite header
+├── src/
+│   ├── main.cpp           # Application entry point
+│   ├── CLI.cpp            # Command-line interface and parsing
+│   ├── Encryption.cpp     # Symmetric encryption (AES, Blowfish)
+│   ├── Hasher.cpp         # Hashing functions (SHA-256, MD5)
+│   ├── RSA.cpp            # RSA key generation and encryption
+│   └── Signature.cpp      # Digital signature operations
+├── include/               # Header files
+├── Makefile              # Build configuration
+└── README.md             # Documentation
 ```
-
-## Algorithm Details
-
-### AES-256-CBC-CTS
-- **Key size**: 256 bits (32 bytes)
-- **IV size**: 128 bits (16 bytes)
-- **Block size**: 128 bits (16 bytes)
-- **Mode**: CBC with Ciphertext Stealing (no padding)
-- **Output format**: `[0x01][salt(16)][iv(16)][ciphertext]`
-
-### Blowfish-CBC
-- **Key size**: 128 bits (16 bytes, can be 4-56 bytes)
-- **IV size**: 64 bits (8 bytes)
-- **Block size**: 64 bits (8 bytes)
-- **Padding**: PKCS7
-- **Output format**: `[0x02][salt(16)][iv(8)][ciphertext]`
-
-### Key Derivation
-- **Algorithm**: PBKDF2-HMAC-SHA256
-- **Iterations**: 100,000
-- **Salt size**: 16 bytes (randomly generated)
-
-### Hash Functions
-- **SHA256**: 256-bit (32 bytes) output, 64 hex characters
-- **MD5**: 128-bit (16 bytes) output, 32 hex characters
-
-## Dependencies
-
-- OpenSSL 3.0+ (`libssl-dev`)
-- C++11 or later
-- Standard C++ library
-
-## Security Notes
-
-1. **Password Security**: Use strong, unique passwords
-2. **No Authentication**: Current implementation doesn't include HMAC/authentication tags
-3. **MD5 Warning**: MD5 is cryptographically broken; use SHA256 for security-critical applications
-4. **Random Generation**: Uses OpenSSL's `RAND_bytes` for cryptographically secure randomness
-5. **Wrong Password**: Decryption with wrong password may succeed but produce garbage (no authentication)
-
-## Improvements Made
-
-1. ✅ Added comprehensive file encryption/decryption tests
-2. ✅ Added extensive hasher module tests
-3. ✅ Test file creation and cleanup
-4. ✅ Hash consistency verification
-5. ✅ File hash vs data hash comparison
-6. ✅ Large data handling tests
-7. ✅ Empty string edge case tests
-8. ✅ Better error handling and reporting
-9. ✅ Organized test output with clear sections
-10. ✅ Helper functions for file I/O
-
-## License
-
-Educational/Research purposes.
 
 ## Author
 
-Enhanced test suite by Claude (Anthropic)
-Original encryption module by Youssuf Hichri
+Youssuf Hichri
