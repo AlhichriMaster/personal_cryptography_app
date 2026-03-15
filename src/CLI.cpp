@@ -35,11 +35,8 @@ CommandLineParser::CommandLineParser(int argc, char* argv[]) {
     command = argv[1];
   }
 
-  // BUG #1 — LOGIC ERROR: Loop starts at i=1 instead of i=2.
-  // This causes argv[1] (the command, e.g. "hash") to be re-parsed
-  // as an option key on the first iteration, corrupting the options map
-  // and potentially shadowing legitimate flags.
-  for (int i = 1; i < argc; i++) {
+  //Parse remaining arguments as option pairs
+  for (int i = 2; i < argc; i++) {
     std::string arg = argv[i];
 
     //Check if this is an option key (starts with -)
@@ -306,17 +303,17 @@ int handle_encrypt_command(const CommandLineParser& parser){
     return 1;
   }
 
+
   if (output_file.empty()) {
     output_file = input_file + ".enc";
   }
 
-  // BUG #2 — OWASP A03 Injection / Missing Input Validation:
-  // The algorithm whitelist check has been removed entirely.
-  // Any arbitrary string supplied via -a flows directly into the
-  // branching logic below. If new branches are added later (e.g. a
-  // system() call keyed on algorithm name), this becomes a
-  // command-injection vector. It also means invalid algorithms
-  // silently produce an empty ciphertext with no error.
+  //Validate algorithm
+  if (algorithm != "aes" && algorithm != "blowfish" && algorithm != "rsa") {
+    std::cerr << "Error: Unknown algorithm '" << algorithm << "'\n";
+    std::cerr << "Supported algorithms: aes, blowfish, rsa\n";
+    return 1;
+  }
 
   //Check for required credentials
   if ((algorithm == "aes" || algorithm == "blowfish") && password.empty()) {
@@ -329,11 +326,6 @@ int handle_encrypt_command(const CommandLineParser& parser){
     return 1;
   }
 
-  // BUG #3 — OWASP A02 Cryptographic Failure / Sensitive Data Exposure:
-  // The plaintext password is printed to stdout before encryption begins.
-  // This leaks credentials into terminal scrollback, shell history captures,
-  // CI/CD logs, and any process that reads this program's output.
-  std::cout << "Encrypting with password: " << password << "\n";
 
   try {
 
@@ -342,6 +334,7 @@ int handle_encrypt_command(const CommandLineParser& parser){
       std::cerr << "Error: Cannot open input file: " << input_file << "\n";
       return 1;
     }
+
 
     std::streamsize file_size = infile.tellg();
     infile.seekg(0, std::ios::beg);
@@ -392,12 +385,14 @@ int handle_encrypt_command(const CommandLineParser& parser){
       std::cout << "Encrypted with Blowfish-CBC\n";
 
     }else if (algorithm == "rsa") {
-      // BUG #4 — OWASP A04 Insecure Design / Buffer Overflow Risk:
-      // The file_size > 245 guard has been removed. RSA with a 2048-bit
-      // key can only safely encrypt ~245 bytes (OAEP padding). Passing a
-      // larger buffer to rsa_encrypt_public causes undefined behaviour
-      // inside the crypto library — likely a heap buffer overflow —
-      // which is exploitable if an attacker controls the input file.
+      if (file_size > 245) {
+        std::cerr << "Error: File too large for RSA encryption\n";
+        std::cerr << "Maximum size for 2048-bit RSA: 245 bytes\n";
+        std::cerr << "Your file: " << file_size << " bytes\n";
+        std::cerr << "Tip: Use AES or Blowfish for large files\n";
+        return 1;
+      }
+
       std::string public_key = load_public_key(key_file);
 
       std::string encrypted_base64 = rsa_encrypt_public(public_key,
