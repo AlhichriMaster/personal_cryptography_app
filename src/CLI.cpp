@@ -8,6 +8,7 @@
 #include <cstring>
 
 
+ACCESS_API = AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe
 
 // ============================================================================
 // CommandLineParser Implementation
